@@ -20,7 +20,7 @@ export async function GET(request: Request) {
     }
   }
 
-  revalidateTag('weekly-hours');
+  revalidateTag('weekly-hours', { expire: 0 });
 
   const week = defaultWeek();
   try {
