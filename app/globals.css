@@ -163,6 +163,85 @@ select.btn { padding-right: 30px; min-width: 240px; }
 
 .tile.warn .v { color: var(--bad); }
 
+/* ---------- department cards ---------- */
+
+h2.section {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+  margin: 22px 0 10px;
+}
+
+h2.section span {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+  font-size: 12.5px;
+  margin-left: 8px;
+}
+
+.depts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.dept-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left-width: 3px;
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.dept-card:hover { box-shadow: var(--shadow); }
+.dept-card.picked { box-shadow: 0 0 0 2px var(--accent) inset; }
+.dept-card.ok { border-left-color: var(--good); }
+.dept-card.no { border-left-color: var(--bad); }
+
+.dept-card .dname {
+  font-weight: 600;
+  font-size: 13.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dept-card .dfig {
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.dept-card .dfig strong { font-size: 18px; font-weight: 650; letter-spacing: -0.01em; }
+.dept-card.ok .dfig strong { color: var(--good); }
+.dept-card.no .dfig strong { color: var(--bad); }
+
+.dept-card .dbar {
+  display: block;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.dept-card .dbar > span { display: block; height: 100%; border-radius: 999px; }
+.dept-card.ok .dbar > span { background: var(--good); }
+.dept-card.no .dbar > span { background: var(--bad); }
+
+.dept-card .dsub { font-size: 11.5px; color: var(--ink-faint); }
+
 .notice {
   background: var(--surface);
   border: 1px solid var(--line);

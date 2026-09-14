@@ -80,6 +80,34 @@ export default function Dashboard({
     };
   }, [rows]);
 
+  /**
+   * One card per department for the whole week, regardless of the filters:
+   * hours logged against 40h x headcount.
+   */
+  const byDepartment = useMemo(() => {
+    const map = new Map<string, { name: string; people: number; hours: number; below: number }>();
+    for (const r of report.rows) {
+      const entry = map.get(r.department)
+        ?? { name: r.department, people: 0, hours: 0, below: 0 };
+      entry.people += 1;
+      entry.hours += r.total;
+      entry.below += r.meetsTarget ? 0 : 1;
+      map.set(r.department, entry);
+    }
+    return [...map.values()]
+      .map((d) => {
+        const goal = d.people * report.target;
+        return {
+          ...d,
+          hours: Math.round(d.hours * 100) / 100,
+          goal,
+          share: goal > 0 ? d.hours / goal : 0,
+          meetsTarget: d.hours >= goal,
+        };
+      })
+      .sort((a, b) => a.share - b.share || a.name.localeCompare(b.name, 'en-GB'));
+  }, [report.rows, report.target]);
+
   const toggleSort = (key: SortKey) => {
     setSort((s) =>
       s.key === key
@@ -196,6 +224,31 @@ export default function Dashboard({
           <p className="k">Sprints</p>
           <p className="v">{hours(shown.sprints)}</p>
         </div>
+      </div>
+
+      <h2 className="section">By department <span>hours logged against {report.target}h per person</span></h2>
+
+      <div className="depts">
+        {byDepartment.map((d) => (
+          <button
+            key={d.name}
+            type="button"
+            className={`dept-card ${d.meetsTarget ? 'ok' : 'no'}${department === d.name ? ' picked' : ''}`}
+            onClick={() => setDepartment(department === d.name ? 'all' : d.name)}
+            aria-pressed={department === d.name}
+          >
+            <span className="dname">{d.name}</span>
+            <span className="dfig">
+              <strong>{hours(d.hours)}</strong> / {hours(d.goal)}h
+            </span>
+            <span className="dbar" aria-hidden="true">
+              <span style={{ width: `${Math.min(100, Math.round(d.share * 100))}%` }} />
+            </span>
+            <span className="dsub">
+              {d.people} {d.people === 1 ? 'person' : 'people'} · {d.below} below target
+            </span>
+          </button>
+        ))}
       </div>
 
       {report.inProgress && (
