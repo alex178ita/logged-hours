@@ -67,6 +67,12 @@ function check(name: string, actual: unknown, expected: unknown) {
   check('person with nothing logged still listed', idle.total, 0);
   check('person with nothing logged is red', idle.meetsTarget, false);
 
+  check('department mapped onto the person', alex.department, 'Digital Operations');
+  check('department for a Product person', marco.department, 'Product');
+  check('department list, alphabetical', report.departments, [
+    'Customer Success Management', 'Digital Operations', 'HR & Finance',
+    'Management', 'Marketing', 'Product', 'Sales',
+  ]);
   check('below target count', report.totals.below, 26);
   check('rows sorted ascending by total', report.rows[0].total <= report.rows[1].total, true);
   check('no public holiday this week', report.holidays.length, 0);

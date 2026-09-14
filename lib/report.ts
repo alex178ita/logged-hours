@@ -30,6 +30,7 @@ export interface DetailLine {
 export interface PersonRow {
   email: string;
   name: string;
+  department: string;
   projects: number;
   internal: number;
   service: number;
@@ -49,6 +50,7 @@ export interface WeekReport {
   inProgress: boolean;
   generatedAt: string;
   holidays: { date: string; name: string }[];
+  departments: string[];
   rows: PersonRow[];
   totals: {
     people: number;
@@ -81,11 +83,13 @@ export function classifyProject(rawName: string): Exclude<Category, 'absence' | 
 
 function sqlEmployees(): string {
   return `
-    select cast("ID" as varchar) as emp_id,
-           cast("Employee Name" as varchar) as emp_name,
-           cast("Email ID" as varchar) as emp_email
-    from "Employee (Zoho People)"
-    where "Employee status" = 'Active'
+    select cast(E."ID" as varchar) as emp_id,
+           cast(E."Employee Name" as varchar) as emp_name,
+           cast(E."Email ID" as varchar) as emp_email,
+           cast(D."Department Name" as varchar) as department
+    from "Employee (Zoho People)" E
+    left join "Department (Zoho People)" D on E."Department" = D."ID"
+    where E."Employee status" = 'Active'
   `;
 }
 
@@ -182,22 +186,24 @@ export async function buildReport(weekStartISO: string, query: QueryFn = runQuer
   const blank = (email: string, name: string): PersonRow => ({
     email,
     name: name || email,
+    department: '',
     projects: 0, internal: 0, service: 0, absence: 0, sprints: 0, total: 0,
     meetsTarget: false,
     detail: [],
   });
 
-  const upsert = (rawEmail: string, name: string): PersonRow | null => {
+  const upsert = (rawEmail: string, name: string, department?: string): PersonRow | null => {
     const email = (rawEmail || '').trim().toLowerCase();
     if (!email || !email.endsWith('@kleecks.com') || EXCLUDED_EMAILS.has(email)) return null;
     let row = people.get(email);
     if (!row) { row = blank(email, name); people.set(email, row); }
     else if (!row.name && name) { row.name = name; }
+    if (department && !row.department) row.department = department.trim();
     return row;
   };
 
   // 1. Everyone active, so people with nothing logged still show up.
-  for (const e of employees) upsert(e.emp_email, e.emp_name);
+  for (const e of employees) upsert(e.emp_email, e.emp_name, e.department);
 
   // 2. Time logs from Zoho People. People mirrors every Zoho Projects log and
   //    additionally holds the People-only service projects, so it is the single
@@ -249,6 +255,7 @@ export async function buildReport(weekStartISO: string, query: QueryFn = runQuer
     const total = row.projects + row.internal + row.service + row.absence + row.sprints;
     return {
       ...row,
+      department: row.department || 'Unassigned',
       projects: round2(row.projects),
       internal: round2(row.internal),
       service: round2(row.service),
@@ -293,6 +300,9 @@ export async function buildReport(weekStartISO: string, query: QueryFn = runQuer
     inProgress: wkStart.getTime() >= weekStart(new Date()).getTime(),
     generatedAt: new Date().toISOString(),
     holidays,
+    departments: [...new Set(rows.map((r) => r.department))].sort((a, b) =>
+      a.localeCompare(b, 'en-GB'),
+    ),
     rows,
     totals,
   };
@@ -305,7 +315,10 @@ export async function buildReport(weekStartISO: string, query: QueryFn = runQuer
 export function getWeekReport(weekStartISO: string): Promise<WeekReport> {
   return unstable_cache(
     () => buildReport(weekStartISO),
-    ['weekly-hours', weekStartISO],
+    // The version segment is part of the cache key: bump it whenever the shape
+    // of WeekReport changes, so entries written by an older deployment are not
+    // served to a newer page that expects new fields.
+    ['weekly-hours', 'v2', weekStartISO],
     { revalidate: 21_600, tags: ['weekly-hours'] },
   )();
 }

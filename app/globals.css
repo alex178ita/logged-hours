@@ -230,6 +230,17 @@ tbody tr:hover td { background: var(--line-soft); }
 
 td.zero { color: var(--ink-faint); }
 
+td.dept {
+  text-align: left;
+  color: var(--ink-soft);
+  font-size: 13px;
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+thead th:nth-child(2) { text-align: left; }
+
 .name { font-weight: 550; }
 .name small { display: block; font-weight: 400; color: var(--ink-faint); font-size: 12px; }
 

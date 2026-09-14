@@ -6,10 +6,14 @@ import { CATEGORY_LABELS, type PersonRow, type WeekReport } from '@/lib/report';
 
 type WeekOption = { value: string; label: string };
 
-type SortKey = 'name' | 'projects' | 'internal' | 'service' | 'absence' | 'sprints' | 'total';
+type SortKey =
+  | 'name' | 'department' | 'projects' | 'internal' | 'service' | 'absence' | 'sprints' | 'total';
+
+const TEXT_KEYS = new Set<SortKey>(['name', 'department']);
 
 const COLUMNS: { key: SortKey; label: string }[] = [
   { key: 'name', label: 'Person' },
+  { key: 'department', label: 'Department' },
   { key: 'projects', label: CATEGORY_LABELS.projects },
   { key: 'internal', label: CATEGORY_LABELS.internal },
   { key: 'service', label: CATEGORY_LABELS.service },
@@ -35,6 +39,7 @@ export default function Dashboard({
   const [pending, startTransition] = useTransition();
   const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>({ key: 'total', dir: 'asc' });
   const [onlyBelow, setOnlyBelow] = useState(false);
+  const [department, setDepartment] = useState('all');
   const [selected, setSelected] = useState<PersonRow | null>(null);
 
   const index = weeks.findIndex((w) => w.value === currentWeek);
@@ -44,26 +49,50 @@ export default function Dashboard({
   };
 
   const rows = useMemo(() => {
-    const filtered = onlyBelow ? report.rows.filter((r) => !r.meetsTarget) : report.rows;
+    const filtered = report.rows.filter(
+      (r) => (!onlyBelow || !r.meetsTarget) && (department === 'all' || r.department === department),
+    );
     const factor = sort.dir === 'asc' ? 1 : -1;
     return [...filtered].sort((a, b) => {
-      if (sort.key === 'name') return factor * a.name.localeCompare(b.name, 'en-GB');
-      return factor * (a[sort.key] - b[sort.key]) || a.name.localeCompare(b.name, 'en-GB');
+      if (TEXT_KEYS.has(sort.key)) {
+        const key = sort.key as 'name' | 'department';
+        return factor * a[key].localeCompare(b[key], 'en-GB')
+          || a.name.localeCompare(b.name, 'en-GB');
+      }
+      const key = sort.key as 'projects' | 'internal' | 'service' | 'absence' | 'sprints' | 'total';
+      return factor * (a[key] - b[key]) || a.name.localeCompare(b.name, 'en-GB');
     });
-  }, [report.rows, sort, onlyBelow]);
+  }, [report.rows, sort, onlyBelow, department]);
+
+  /** Tiles and the totals row follow whatever is on screen. */
+  const shown = useMemo(() => {
+    const sum = (pick: (r: PersonRow) => number) =>
+      Math.round(rows.reduce((a, r) => a + pick(r), 0) * 100) / 100;
+    return {
+      people: rows.length,
+      below: rows.filter((r) => !r.meetsTarget).length,
+      projects: sum((r) => r.projects),
+      internal: sum((r) => r.internal),
+      service: sum((r) => r.service),
+      absence: sum((r) => r.absence),
+      sprints: sum((r) => r.sprints),
+      total: sum((r) => r.total),
+    };
+  }, [rows]);
 
   const toggleSort = (key: SortKey) => {
     setSort((s) =>
       s.key === key
         ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' }
-        : { key, dir: key === 'name' ? 'asc' : 'desc' },
+        : { key, dir: TEXT_KEYS.has(key) ? 'asc' : 'desc' },
     );
   };
 
   const downloadCsv = () => {
     const header = ['Person', 'Email', ...COLUMNS.slice(1).map((c) => c.label), 'Meets target'];
-    const lines = [header, ...report.rows.map((r) => [
-      r.name, r.email, r.projects, r.internal, r.service, r.absence, r.sprints, r.total,
+    const lines = [header, ...rows.map((r) => [
+      r.name, r.email, r.department,
+      r.projects, r.internal, r.service, r.absence, r.sprints, r.total,
       r.meetsTarget ? 'yes' : 'no',
     ])];
     const csv = lines
@@ -112,11 +141,23 @@ export default function Dashboard({
         </button>
 
         <span className="week-label">
-          {pending ? 'Loading…' : `${report.totals.people} people · target ${report.target}h`}
+          {pending ? 'Loading…' : `${shown.people} people · target ${report.target}h`}
         </span>
 
         <span className="spacer" />
 
+        <select
+          className="btn"
+          style={{ minWidth: 0 }}
+          value={department}
+          onChange={(e) => setDepartment(e.target.value)}
+          aria-label="Filter by department"
+        >
+          <option value="all">All departments</option>
+          {(report.departments ?? []).map((d) => (
+            <option key={d} value={d}>{d}</option>
+          ))}
+        </select>
         <button
           className={`btn${onlyBelow ? ' active' : ''}`}
           onClick={() => setOnlyBelow((v) => !v)}
@@ -129,31 +170,31 @@ export default function Dashboard({
       <div className="tiles">
         <div className="tile">
           <p className="k">Hours logged</p>
-          <p className="v">{hours(report.totals.total)}</p>
+          <p className="v">{hours(shown.total)}</p>
         </div>
-        <div className={`tile${report.totals.below > 0 ? ' warn' : ''}`}>
+        <div className={`tile${shown.below > 0 ? ' warn' : ''}`}>
           <p className="k">Below {report.target}h</p>
-          <p className="v">{report.totals.below} / {report.totals.people}</p>
+          <p className="v">{shown.below} / {shown.people}</p>
         </div>
         <div className="tile">
           <p className="k">Projects</p>
-          <p className="v">{hours(report.totals.projects)}</p>
+          <p className="v">{hours(shown.projects)}</p>
         </div>
         <div className="tile">
           <p className="k">Internal</p>
-          <p className="v">{hours(report.totals.internal)}</p>
+          <p className="v">{hours(shown.internal)}</p>
         </div>
         <div className="tile">
           <p className="k">Service</p>
-          <p className="v">{hours(report.totals.service)}</p>
+          <p className="v">{hours(shown.service)}</p>
         </div>
         <div className="tile">
           <p className="k">Absence</p>
-          <p className="v">{hours(report.totals.absence)}</p>
+          <p className="v">{hours(shown.absence)}</p>
         </div>
         <div className="tile">
           <p className="k">Sprints</p>
-          <p className="v">{hours(report.totals.sprints)}</p>
+          <p className="v">{hours(shown.sprints)}</p>
         </div>
       </div>
 
@@ -194,6 +235,7 @@ export default function Dashboard({
                     {r.name}
                     <small>{r.email}</small>
                   </td>
+                  <td className="dept">{r.department}</td>
                   <td className={r.projects ? '' : 'zero'}>{hours(r.projects)}</td>
                   <td className={r.internal ? '' : 'zero'}>{hours(r.internal)}</td>
                   <td className={r.service ? '' : 'zero'}>{hours(r.service)}</td>
@@ -214,12 +256,13 @@ export default function Dashboard({
               <tfoot>
                 <tr>
                   <td>Total</td>
-                  <td>{hours(report.totals.projects)}</td>
-                  <td>{hours(report.totals.internal)}</td>
-                  <td>{hours(report.totals.service)}</td>
-                  <td>{hours(report.totals.absence)}</td>
-                  <td>{hours(report.totals.sprints)}</td>
-                  <td>{hours(report.totals.total)}</td>
+                  <td />
+                  <td>{hours(shown.projects)}</td>
+                  <td>{hours(shown.internal)}</td>
+                  <td>{hours(shown.service)}</td>
+                  <td>{hours(shown.absence)}</td>
+                  <td>{hours(shown.sprints)}</td>
+                  <td>{hours(shown.total)}</td>
                 </tr>
               </tfoot>
             )}
@@ -238,7 +281,7 @@ export default function Dashboard({
             <button className="close" onClick={() => setSelected(null)} aria-label="Close">×</button>
             <h2>{selected.name}</h2>
             <p className="sub">
-              {report.rangeLabel} · {hours(selected.total)}h of {report.target}h
+              {selected.department} · {report.rangeLabel} · {hours(selected.total)}h of {report.target}h
             </p>
             {selected.detail.length === 0 && (
               <p className="sub">Nothing logged in Projects, People or Sprints this week.</p>
