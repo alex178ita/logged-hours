@@ -1,4 +1,5 @@
 import Dashboard from '@/components/Dashboard';
+import Logo from '@/components/Logo';
 import { defaultWeek, getWeekReport, selectableWeeks, type WeekReport } from '@/lib/report';
 import { addDays, formatRange, isoWeek, parseISODay, weekStart, toISODay } from '@/lib/dates';
 
@@ -38,7 +39,7 @@ export default async function Page({
     <>
       <header className="masthead">
         <div className="wrap">
-          <p className="wordmark">KLEECKS</p>
+          <Logo className="masthead-logo" height={24} />
           <h1>Weekly Hours Logged</h1>
           <p className="version">v.0.1 – Beta for testing</p>
         </div>

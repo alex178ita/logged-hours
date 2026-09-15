@@ -52,6 +52,55 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* ---------- splash ---------- */
+
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 26px;
+  background: var(--brand);
+  padding: 24px;
+  text-align: center;
+}
+
+.splash.is-overlay { animation: splash-in 0.18s ease both; }
+
+.splash-logo {
+  max-width: min(260px, 62vw);
+  animation: splash-breathe 2.4s ease-in-out infinite;
+}
+
+.splash-text {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 14px;
+  letter-spacing: 0.02em;
+}
+
+.splash-text .dots { display: inline-block; margin: 0 2px; }
+
+.splash-text .dots i {
+  font-style: normal;
+  animation: splash-dot 1.4s infinite;
+}
+
+.splash-text .dots i:nth-child(2) { animation-delay: 0.2s; }
+.splash-text .dots i:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes splash-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes splash-breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+@keyframes splash-dot { 0%, 60%, 100% { opacity: 0.25; } 30% { opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .splash-logo, .splash-text .dots i, .splash.is-overlay { animation: none; }
+  .splash-text .dots i { opacity: 0.7; }
+}
+
 /* ---------- masthead ---------- */
 
 .masthead {
@@ -67,14 +116,18 @@ html, body {
   padding-inline: 20px;
 }
 
+.masthead-logo { display: block; margin: 0 0 14px; }
+
 .wordmark {
+  display: inline-block;
   font-weight: 700;
   letter-spacing: 0.28em;
-  font-size: 13px;
   color: #fff;
-  opacity: 0.85;
-  margin: 0 0 14px;
+  opacity: 0.9;
+  line-height: 1;
 }
+
+.splash .wordmark { letter-spacing: 0.3em; }
 
 .masthead h1 {
   font-size: 26px;

@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { CATEGORY_LABELS, type PersonRow, type WeekReport } from '@/lib/report';
+import Splash from './Splash';
 
 type WeekOption = { value: string; label: string };
 
@@ -139,6 +140,8 @@ export default function Dashboard({
 
   return (
     <>
+      {pending && <Splash overlay />}
+
       <div className="toolbar">
         <button
           className="btn icon"
